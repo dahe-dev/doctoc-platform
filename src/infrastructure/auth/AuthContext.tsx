@@ -3,7 +3,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { onAuthChange, signIn, signUp, signOut, getIdToken, getPatientIdFromAuth, getCleanDisplayName } from './firebase';
+import {
+  onAuthChange,
+  signIn,
+  signUp,
+  signOut,
+  getIdToken,
+  getPatientIdFromAuth,
+  getCleanDisplayName,
+} from './firebase';
 import { ROUTES } from '@/config/constants';
 
 interface AuthContextType {
@@ -12,15 +20,23 @@ interface AuthContextType {
   displayName: string | null;
   loading: boolean;
   error: string | null;
-  login: (email: string, password: string, shouldRedirect?: boolean) => Promise<void>;
-  register: (email: string, password: string, userData: {
-    names: string;
-    surnames: string;
-    dni: string;
-    birth_date: string;
-    gender: 'Masculino' | 'Femenino';
-    phone: string;
-  }) => Promise<{ uid: string }>;
+  login: (
+    email: string,
+    password: string,
+    shouldRedirect?: boolean,
+  ) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    userData: {
+      names: string;
+      surnames: string;
+      dni: string;
+      birth_date: string;
+      gender: 'Masculino' | 'Femenino';
+      phone: string;
+    },
+  ) => Promise<{ uid: string }>;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -50,7 +66,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     const unsubscribe = onAuthChange(async (firebaseUser) => {
       setUser(firebaseUser);
-      
+
       if (firebaseUser) {
         await getIdToken();
         const pId = getPatientIdFromAuth();
@@ -66,18 +82,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setPatientId(null);
         setDisplayName(null);
       }
-      
+
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string, shouldRedirect: boolean = true) => {
+  const login = async (
+    email: string,
+    password: string,
+    shouldRedirect: boolean = true,
+  ) => {
     try {
       setError(null);
       setLoading(true);
       await signIn(email, password);
+
+      await getIdToken();
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       if (shouldRedirect) {
         router.push(ROUTES.auth.dashboard);
       }
@@ -90,22 +115,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const register = async (email: string, password: string, userData: {
-    names: string;
-    surnames: string;
-    dni: string;
-    birth_date: string;
-    gender: 'Masculino' | 'Femenino';
-    phone: string;
-  }) => {
+  const register = async (
+    email: string,
+    password: string,
+    userData: {
+      names: string;
+      surnames: string;
+      dni: string;
+      birth_date: string;
+      gender: 'Masculino' | 'Femenino';
+      phone: string;
+    },
+  ) => {
     try {
       setError(null);
       setLoading(true);
-      const firebaseUser = await signUp(email, password, `${userData.names} ${userData.surnames}`);
+      const firebaseUser = await signUp(
+        email,
+        password,
+        `${userData.names} ${userData.surnames}`,
+      );
       return { uid: firebaseUser.uid };
     } catch (error: unknown) {
       console.error('Register error:', error);
-      
+
       let errorMsg = 'Failed to register';
       if (error instanceof Error) {
         if (error.message.includes('email-already-in-use')) {
@@ -118,7 +151,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           errorMsg = error.message;
         }
       }
-      
+
       setError(errorMsg);
       throw new Error(errorMsg);
     } finally {
