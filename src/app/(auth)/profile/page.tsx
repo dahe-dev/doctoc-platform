@@ -23,6 +23,7 @@ import {
   Save,
   X,
 } from 'lucide-react';
+import { cleanDisplayName } from '@/presentation/utils';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -86,7 +87,7 @@ export default function ProfilePage() {
                     </Avatar>
                     <div>
                       <Heading as="h2" size="lg">
-                        {user?.displayName || 'Usuario'}
+                        {cleanDisplayName(user?.displayName)}
                       </Heading>
                       <Text variant="muted">{user?.email}</Text>
                     </div>

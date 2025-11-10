@@ -1,4 +1,8 @@
-import { User, type CalendarInfo, type ScheduleData } from '@/core/domain/entities/User';
+import {
+  User,
+  type CalendarInfo,
+  type ScheduleData,
+} from '@/core/domain/entities/User';
 
 export type SerializedUser = {
   id: string;
@@ -9,6 +13,7 @@ export type SerializedUser = {
   specialty?: string;
   photoUrl?: string;
   gender?: string;
+  role?: string;
   calendarInfo?: {
     overschedule: boolean;
     configureByType: boolean;
@@ -28,6 +33,7 @@ export class UserMapper {
       specialty: user.specialty,
       photoUrl: user.photoUrl,
       gender: user.gender,
+      role: user.role,
       calendarInfo: user.calendarInfo,
     };
   }
@@ -41,15 +47,16 @@ export class UserMapper {
       serialized.specialty,
       serialized.calendarInfo as CalendarInfo | undefined,
       serialized.photoUrl,
-      serialized.gender
+      serialized.gender,
+      serialized.role,
     );
   }
 
   static toSerializedArray(users: User[]): SerializedUser[] {
-    return users.map(user => UserMapper.toSerialized(user));
+    return users.map((user) => UserMapper.toSerialized(user));
   }
 
   static toEntityArray(serializedUsers: SerializedUser[]): User[] {
-    return serializedUsers.map(serialized => UserMapper.toEntity(serialized));
+    return serializedUsers.map((serialized) => UserMapper.toEntity(serialized));
   }
 }

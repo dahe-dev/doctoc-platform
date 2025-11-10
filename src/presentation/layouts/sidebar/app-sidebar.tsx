@@ -1,6 +1,6 @@
-"use client"
+'use client';
 
-import * as React from "react"
+import * as React from 'react';
 import {
   Calendar,
   Heart,
@@ -9,12 +9,12 @@ import {
   Stethoscope,
   Activity,
   UserCircle,
-} from "lucide-react"
-import { useAuth } from "@/infrastructure/auth/AuthContext"
-import { ROUTES } from "@/config/constants"
+} from 'lucide-react';
+import { useAuth } from '@/infrastructure/auth/AuthContext';
+import { ROUTES } from '@/config/constants';
 
-import { NavMain } from "@/presentation/layouts/sidebar/nav-main"
-import { NavUser } from "@/presentation/layouts/sidebar/nav-user"
+import { NavMain } from '@/presentation/layouts/sidebar/nav-main';
+import { NavUser } from '@/presentation/layouts/sidebar/nav-user';
 import {
   Sidebar,
   SidebarContent,
@@ -24,57 +24,58 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/presentation/components/ui/sidebar"
+} from '@/presentation/components/ui/sidebar';
+import { cleanDisplayName } from '@/presentation/utils';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { user } = useAuth()
+  const { user } = useAuth();
 
   const userData = {
-    name: user?.displayName || "Usuario",
-    email: user?.email || "",
-    avatar: user?.photoURL || "",
-  }
+    name: cleanDisplayName(user?.displayName),
+    email: user?.email || '',
+    avatar: user?.photoURL || '',
+  };
 
   const navMain = [
     {
-      title: "Dashboard",
+      title: 'Dashboard',
       url: ROUTES.auth.dashboard,
       icon: Home,
     },
     {
-      title: "Citas",
+      title: 'Citas',
       url: ROUTES.auth.appointments,
       icon: Calendar,
     },
     {
-      title: "Doctores",
+      title: 'Doctores',
       url: ROUTES.public.doctors,
       icon: Stethoscope,
     },
     {
-      title: "Perfil",
+      title: 'Perfil',
       url: ROUTES.auth.profile,
       icon: UserCircle,
     },
-  ]
+  ];
 
   const navSecondary = [
     {
-      title: "Historial Médico",
-      url: "#",
+      title: 'Historial Médico',
+      url: '#',
       icon: FileText,
     },
     {
-      title: "Registros de Salud",
-      url: "#",
+      title: 'Registros de Salud',
+      url: '#',
       icon: Heart,
     },
     {
-      title: "Actividad",
-      url: "#",
+      title: 'Actividad',
+      url: '#',
       icon: Activity,
     },
-  ]
+  ];
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -104,5 +105,5 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }

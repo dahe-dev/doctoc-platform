@@ -47,12 +47,12 @@ export function AppHeader() {
       </Breadcrumb>
       <div className="ml-auto flex items-center gap-2">
         <Link href={ROUTES.public.home}>
+          <ThemeToggle />
           <Button variant="outline" size="sm">
             <Home className="mr-2 h-4 w-4" />
             Inicio
           </Button>
         </Link>
-        <ThemeToggle />
       </div>
     </header>
   );

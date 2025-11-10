@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/infrastructure/auth/AuthContext';
 import {
   Calendar,
@@ -23,10 +24,21 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useQuery } from '@tanstack/react-query';
 import { getAppointmentsByPatient } from '@/app/actions/appointments';
-import { filterUpcomingAppointments } from '@/presentation/utils';
+import { getDoctorById } from '@/app/actions/doctors';
+import { type SerializedUser } from '@/core/application/mappers';
+import {
+  filterUpcomingAppointments,
+  cleanDisplayName,
+  formatDoctorName,
+} from '@/presentation/utils';
 
 export default function DashboardPage() {
   const { patientId, displayName, user } = useAuth();
+  const [doctorsMap, setDoctorsMap] = useState<Map<string, SerializedUser>>(
+    new Map(),
+  );
+
+  const cleanedDisplayName = cleanDisplayName(displayName);
 
   const effectivePatientId =
     patientId ||
@@ -54,6 +66,51 @@ export default function DashboardPage() {
     3,
   );
 
+  useEffect(() => {
+    const loadDoctors = async () => {
+      const uniqueDoctorIds = [
+        ...new Set(upcomingAppointments.map((apt) => apt.userId)),
+      ];
+      const doctorsToLoad = uniqueDoctorIds.filter((id) => !doctorsMap.has(id));
+
+      if (doctorsToLoad.length === 0) return;
+
+      const newDoctorsMap = new Map<string, SerializedUser>();
+
+      for (const doctorId of doctorsToLoad) {
+        const result = await getDoctorById(doctorId, DOCTOC_CONFIG.orgID);
+        if (result.success && result.data) {
+          newDoctorsMap.set(doctorId, result.data);
+        }
+      }
+
+      if (newDoctorsMap.size > 0) {
+        setDoctorsMap((prev) => new Map([...prev, ...newDoctorsMap]));
+      }
+    };
+
+    if (upcomingAppointments.length > 0) {
+      loadDoctors();
+    }
+  }, [upcomingAppointments, doctorsMap]);
+
+  const getDoctorDisplayName = (userId: string): string => {
+    const doctor = doctorsMap.get(userId);
+    if (!doctor) return `Doctor ${userId.slice(0, 8)}`;
+
+    return formatDoctorName(
+      doctor.firstName,
+      doctor.lastName,
+      doctor.gender,
+      doctor.role,
+    );
+  };
+
+  const getDoctorSpecialty = (userId: string): string => {
+    const doctor = doctorsMap.get(userId);
+    return doctor?.specialty || 'Medicina General';
+  };
+
   if (isLoading) {
     return (
       <Section size="lg">
@@ -71,7 +128,7 @@ export default function DashboardPage() {
       <Section variant="gradient" size="xs" className="border-border border-b">
         <Container>
           <Heading as="h1" size="xl" className="mb-2">
-            Bienvenido, {displayName || 'Paciente'}!
+            Bienvenido, {cleanedDisplayName}!
           </Heading>
           <Text variant="muted" size="lg">
             Administra tus citas y registros médicos en un solo lugar
@@ -129,8 +186,8 @@ export default function DashboardPage() {
                       upcomingAppointments.map((appointment) => (
                         <AppointmentCard
                           key={appointment.id}
-                          doctorName={`Doctor ${appointment.userId.slice(0, 8)}`}
-                          specialty={appointment.type}
+                          doctorName={getDoctorDisplayName(appointment.userId)}
+                          specialty={getDoctorSpecialty(appointment.userId)}
                           date={format(
                             new Date(appointment.scheduledStart),
                             "d 'de' MMMM, yyyy",

@@ -11,6 +11,7 @@ export class SearchDoctorsUseCase {
     }
 
     const users = await this.userRepo.findAll(dto.orgID);
+
     return users;
   }
 }

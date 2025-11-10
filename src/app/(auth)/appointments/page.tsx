@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/infrastructure/auth/AuthContext';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -31,19 +31,27 @@ import {
   getAppointmentsByPatient,
   cancelAppointment,
 } from '@/app/actions/appointments';
-import { type SerializedAppointment } from '@/core/application/mappers';
+import { getDoctorById } from '@/app/actions/doctors';
+import {
+  type SerializedAppointment,
+  type SerializedUser,
+} from '@/core/application/mappers';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   filterUpcomingAppointments,
   filterPastAppointments,
   getAppointmentStatusVariant,
   getAppointmentStatusLabel,
+  formatDoctorName,
 } from '@/presentation/utils';
 
 export default function AppointmentsPage() {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [selectedAppointment, setSelectedAppointment] =
     useState<SerializedAppointment | null>(null);
+  const [doctorsMap, setDoctorsMap] = useState<Map<string, SerializedUser>>(
+    new Map(),
+  );
   const { user, patientId } = useAuth();
   const queryClient = useQueryClient();
 
@@ -67,6 +75,46 @@ export default function AppointmentsPage() {
     },
     enabled: !!effectivePatientId,
   });
+
+  useEffect(() => {
+    const loadDoctors = async () => {
+      const uniqueDoctorIds = [
+        ...new Set(appointments.map((apt) => apt.userId)),
+      ];
+      const doctorsToLoad = uniqueDoctorIds.filter((id) => !doctorsMap.has(id));
+
+      if (doctorsToLoad.length === 0) return;
+
+      const newDoctorsMap = new Map<string, SerializedUser>();
+
+      for (const doctorId of doctorsToLoad) {
+        const result = await getDoctorById(doctorId, DOCTOC_CONFIG.orgID);
+        if (result.success && result.data) {
+          newDoctorsMap.set(doctorId, result.data);
+        }
+      }
+
+      if (newDoctorsMap.size > 0) {
+        setDoctorsMap((prev) => new Map([...prev, ...newDoctorsMap]));
+      }
+    };
+
+    if (appointments.length > 0) {
+      loadDoctors();
+    }
+  }, [appointments, doctorsMap]);
+
+  const getDoctorDisplayName = (userId: string): string => {
+    const doctor = doctorsMap.get(userId);
+    if (!doctor) return `Doctor ${userId.slice(0, 8)}`;
+
+    return formatDoctorName(
+      doctor.firstName,
+      doctor.lastName,
+      doctor.gender,
+      doctor.role,
+    );
+  };
 
   const cancelMutation = useMutation({
     mutationFn: async (appointment: SerializedAppointment) => {
@@ -134,7 +182,7 @@ export default function AppointmentsPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">
-                          Dr. {appointment.userId.slice(0, 8)}
+                          {getDoctorDisplayName(appointment.userId)}
                         </p>
                         <Badge
                           variant={getAppointmentStatusVariant(
@@ -225,7 +273,7 @@ export default function AppointmentsPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">
-                          Dr. {appointment.userId.slice(0, 8)}
+                          {getDoctorDisplayName(appointment.userId)}
                         </p>
                         <Badge
                           variant={getAppointmentStatusVariant(
