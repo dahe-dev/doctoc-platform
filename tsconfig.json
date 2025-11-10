@@ -17,10 +17,40 @@
       {
         "name": "next"
       }
-    ],
+    ], 
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": [
+        "./src/*" 
+      ],
+      "@/app/*": [
+        "./src/app/*"
+      ],
+      "@/core/*": [
+        "./src/core/*"
+      ],
+      "@/infrastructure/*": [
+        "./src/infrastructure/*"
+      ],
+      "@/presentation/*": [
+        "./src/presentation/*"
+      ],
+      "@/config/*": [
+        "./src/config/*"
+      ],
+      "@/tests/*": [
+        "./src/tests/*"
+      ]
+    },
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
