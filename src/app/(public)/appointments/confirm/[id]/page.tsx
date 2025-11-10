@@ -4,9 +4,22 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CheckCircle2, Calendar, Clock, MapPin, User, FileText, Loader2, AlertCircle } from 'lucide-react';
+import {
+  CheckCircle2,
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  FileText,
+  Loader2,
+  AlertCircle,
+} from 'lucide-react';
 import { Button } from '@/presentation/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/presentation/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+} from '@/presentation/components/ui/card';
 import { Container } from '@/presentation/components/ui/container';
 import { Section } from '@/presentation/components/ui/section';
 import { LoadingSpinner } from '@/presentation/components/ui/LoadingSpinner';
@@ -15,11 +28,18 @@ import { Label } from '@/presentation/components/ui/label';
 import { Checkbox } from '@/presentation/components/ui/checkbox';
 import { Badge } from '@/presentation/components/ui/badge';
 import { useAuth } from '@/infrastructure/auth/AuthContext';
-import { useDoctorProfile, useDoctorAvailability } from '@/presentation/hooks/queries';
-import { useAppointmentTypes, useLocations } from '@/presentation/hooks/queries/useOrganization';
+import {
+  useDoctorProfile,
+  useDoctorAvailability,
+} from '@/presentation/hooks/queries';
+import {
+  useAppointmentTypes,
+  useLocations,
+} from '@/presentation/hooks/queries/useOrganization';
 import { DOCTOC_CONFIG, ROUTES } from '@/config/constants';
 import { toast } from 'sonner';
 import { createAppointment } from '@/app/actions';
+import { useQueryClient } from '@tanstack/react-query';
 
 type AppointmentData = {
   doctorId: string;
@@ -36,8 +56,10 @@ export default function ConfirmAppointmentPage() {
   const router = useRouter();
   const { user, patientId, displayName } = useAuth();
   const appointmentId = params.id as string;
+  const queryClient = useQueryClient();
 
-  const [appointmentData, setAppointmentData] = useState<AppointmentData | null>(null);
+  const [appointmentData, setAppointmentData] =
+    useState<AppointmentData | null>(null);
   const [motive, setMotive] = useState('');
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
@@ -45,9 +67,9 @@ export default function ConfirmAppointmentPage() {
   const [slotAvailable, setSlotAvailable] = useState(false);
 
   const { data: doctorResponse } = useDoctorProfile(
-    appointmentData?.doctorId || '', 
-    DOCTOC_CONFIG.orgID, 
-    !!appointmentData?.doctorId
+    appointmentData?.doctorId || '',
+    DOCTOC_CONFIG.orgID,
+    !!appointmentData?.doctorId,
   );
 
   const { data: availabilityData } = useDoctorAvailability(
@@ -55,9 +77,9 @@ export default function ConfirmAppointmentPage() {
       orgID: DOCTOC_CONFIG.orgID,
       dayKey: appointmentData?.dayKey || '',
       userId: appointmentData?.doctorId,
-      format: 'busy_ranges'
+      format: 'busy_ranges',
     },
-    !!appointmentData?.dayKey && !!appointmentData?.doctorId
+    !!appointmentData?.dayKey && !!appointmentData?.doctorId,
   );
 
   const { data: typesResponse } = useAppointmentTypes(DOCTOC_CONFIG.orgID);
@@ -77,7 +99,9 @@ export default function ConfirmAppointmentPage() {
   useEffect(() => {
     if (!user) {
       const currentPath = `/appointments/confirm/${appointmentId}`;
-      router.push(`${ROUTES.public.login}?redirect=${encodeURIComponent(currentPath)}`);
+      router.push(
+        `${ROUTES.public.login}?redirect=${encodeURIComponent(currentPath)}`,
+      );
     }
   }, [user, appointmentId, router]);
 
@@ -87,29 +111,34 @@ export default function ConfirmAppointmentPage() {
     setIsVerifying(true);
 
     const busyRanges = availabilityData.data?.busyRanges || [];
-    const [startHour, startMin] = appointmentData.startTime.split(':').map(Number);
+    const [startHour, startMin] = appointmentData.startTime
+      .split(':')
+      .map(Number);
     const [endHour, endMin] = appointmentData.endTime.split(':').map(Number);
     const slotStartMinutes = startHour * 60 + startMin;
     const slotEndMinutes = endHour * 60 + endMin;
 
-    const isOccupied = busyRanges.some(busy => {
-      const busyStart = busy.start.includes('T') 
-        ? busy.start.split('T')[1].substring(0, 5) 
+    const isOccupied = busyRanges.some((busy) => {
+      const busyStart = busy.start.includes('T')
+        ? busy.start.split('T')[1].substring(0, 5)
         : busy.start.substring(0, 5);
-      const busyEnd = busy.end.includes('T') 
-        ? busy.end.split('T')[1].substring(0, 5) 
+      const busyEnd = busy.end.includes('T')
+        ? busy.end.split('T')[1].substring(0, 5)
         : busy.end.substring(0, 5);
-      
+
       const [busyStartH, busyStartM] = busyStart.split(':').map(Number);
       const [busyEndH, busyEndM] = busyEnd.split(':').map(Number);
-      
+
       const busyStartMinutes = busyStartH * 60 + busyStartM;
       const busyEndMinutes = busyEndH * 60 + busyEndM;
-      
+
       return (
-        (slotStartMinutes >= busyStartMinutes && slotStartMinutes < busyEndMinutes) ||
-        (slotEndMinutes > busyStartMinutes && slotEndMinutes <= busyEndMinutes) ||
-        (slotStartMinutes <= busyStartMinutes && slotEndMinutes >= busyEndMinutes)
+        (slotStartMinutes >= busyStartMinutes &&
+          slotStartMinutes < busyEndMinutes) ||
+        (slotEndMinutes > busyStartMinutes &&
+          slotEndMinutes <= busyEndMinutes) ||
+        (slotStartMinutes <= busyStartMinutes &&
+          slotEndMinutes >= busyEndMinutes)
       );
     });
 
@@ -123,16 +152,25 @@ export default function ConfirmAppointmentPage() {
     setIsSubmitting(true);
 
     try {
-      const effectivePatientId = patientId || 
-        (typeof window !== 'undefined' ? localStorage.getItem('patient_id') : null) || 
+      const effectivePatientId =
+        patientId ||
+        (typeof window !== 'undefined'
+          ? localStorage.getItem('patient_id')
+          : null) ||
         user.uid;
 
       const [day, month, year] = appointmentData.dayKey.split('-');
       const dateStr = `${year}-${month}-${day}`;
-      const scheduledStart = new Date(`${dateStr}T${appointmentData.startTime}:00.000Z`);
-      const scheduledEnd = new Date(`${dateStr}T${appointmentData.endTime}:00.000Z`);
+      const scheduledStart = new Date(
+        `${dateStr}T${appointmentData.startTime}:00.000Z`,
+      );
+      const scheduledEnd = new Date(
+        `${dateStr}T${appointmentData.endTime}:00.000Z`,
+      );
 
-      const appointmentType = typesResponse?.data?.find(t => t.id === appointmentData.typeId);
+      const appointmentType = typesResponse?.data?.find(
+        (t) => t.id === appointmentData.typeId,
+      );
 
       const result = await createAppointment({
         orgID: DOCTOC_CONFIG.orgID,
@@ -148,13 +186,17 @@ export default function ConfirmAppointmentPage() {
         version: 'v2',
         locationId: appointmentData.locationId,
         recipeID: '',
-        category: 'cita' ,
-        personaEjecutante: displayName || user.email || 'Paciente'
+        category: 'cita',
+        personaEjecutante: displayName || user.email || 'Paciente',
       });
 
       if (result.success && result.data) {
         sessionStorage.removeItem(`appointment_${appointmentId}`);
-        
+
+        queryClient.invalidateQueries({
+          queryKey: ['appointments', effectivePatientId],
+        });
+
         toast.success('¡Cita agendada exitosamente!', {
           description: `Tu cita con ${doctorResponse?.data?.firstName} ${doctorResponse?.data?.lastName} ha sido confirmada`,
         });
@@ -165,7 +207,8 @@ export default function ConfirmAppointmentPage() {
       }
     } catch (error) {
       toast.error('Error al agendar la cita', {
-        description: error instanceof Error ? error.message : 'Por favor intenta de nuevo'
+        description:
+          error instanceof Error ? error.message : 'Por favor intenta de nuevo',
       });
     } finally {
       setIsSubmitting(false);
@@ -181,7 +224,7 @@ export default function ConfirmAppointmentPage() {
 
   if (!user || !appointmentData || !doctorResponse?.data) {
     return (
-      <Section className="min-h-screen flex items-center justify-center">
+      <Section className="flex min-h-screen items-center justify-center">
         <LoadingSpinner />
       </Section>
     );
@@ -189,10 +232,10 @@ export default function ConfirmAppointmentPage() {
 
   if (isVerifying) {
     return (
-      <Section className="min-h-screen flex items-center justify-center">
-        <Card className="p-12 text-center max-w-md">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
-          <h2 className="text-xl font-bold mb-2">Verificando disponibilidad</h2>
+      <Section className="flex min-h-screen items-center justify-center">
+        <Card className="max-w-md p-12 text-center">
+          <Loader2 className="text-primary mx-auto mb-4 h-12 w-12 animate-spin" />
+          <h2 className="mb-2 text-xl font-bold">Verificando disponibilidad</h2>
           <p className="text-muted-foreground">
             Validando que el horario siga disponible...
           </p>
@@ -203,15 +246,16 @@ export default function ConfirmAppointmentPage() {
 
   if (!slotAvailable) {
     return (
-      <Section className="min-h-screen flex items-center justify-center">
+      <Section className="flex min-h-screen items-center justify-center">
         <Container>
-          <Card className="p-12 text-center max-w-md mx-auto">
-            <div className="h-16 w-16 rounded-full bg-destructive/10 mx-auto mb-4 flex items-center justify-center">
-              <AlertCircle className="h-8 w-8 text-destructive" />
+          <Card className="mx-auto max-w-md p-12 text-center">
+            <div className="bg-destructive/10 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+              <AlertCircle className="text-destructive h-8 w-8" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Horario no disponible</h2>
+            <h2 className="mb-2 text-2xl font-bold">Horario no disponible</h2>
             <p className="text-muted-foreground mb-6">
-              Lo sentimos, este horario ya no está disponible. Por favor selecciona otro horario.
+              Lo sentimos, este horario ya no está disponible. Por favor
+              selecciona otro horario.
             </p>
             <Button onClick={handleCancel} className="w-full">
               Seleccionar otro horario
@@ -223,8 +267,12 @@ export default function ConfirmAppointmentPage() {
   }
 
   const doctor = doctorResponse.data;
-  const selectedType = typesResponse?.data?.find(t => t.id === appointmentData.typeId);
-  const selectedLocation = locationsResponse?.data?.find(l => l.id === appointmentData.locationId);
+  const selectedType = typesResponse?.data?.find(
+    (t) => t.id === appointmentData.typeId,
+  );
+  const selectedLocation = locationsResponse?.data?.find(
+    (l) => l.id === appointmentData.locationId,
+  );
 
   const formattedDate = (() => {
     const [day, month, year] = appointmentData.dayKey.split('-');
@@ -237,24 +285,24 @@ export default function ConfirmAppointmentPage() {
   return (
     <Section size="xs">
       <Container>
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="mx-auto max-w-2xl space-y-6">
           <Card>
             <CardHeader>
-          <div className="text-center border-b pb-4 ">
-            <h1 className="text-2xl font-bold mb-2">Confirmar Cita</h1>
-            <p className="text-muted-foreground">
-              Revisa los detalles antes de confirmar tu cita
-            </p>
-          </div>
+              <div className="border-b pb-4 text-center">
+                <h1 className="mb-2 text-2xl font-bold">Confirmar Cita</h1>
+                <p className="text-muted-foreground">
+                  Revisa los detalles antes de confirmar tu cita
+                </p>
+              </div>
               {/* <CardTitle>Resumen de tu Cita</CardTitle> */}
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-start gap-4">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <User className="h-6 w-6 text-primary" />
+                <div className="bg-primary/10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full">
+                  <User className="text-primary h-6 w-6" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg">
+                  <h3 className="text-lg font-semibold">
                     {doctor.firstName} {doctor.lastName}
                   </h3>
                   {doctor.specialty && (
@@ -267,22 +315,22 @@ export default function ConfirmAppointmentPage() {
 
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                  <Calendar className="text-muted-foreground h-5 w-5" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Fecha</p>
+                    <p className="text-muted-foreground text-sm">Fecha</p>
                     <p className="font-medium capitalize">{formattedDate}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Clock className="h-5 w-5 text-muted-foreground" />
+                  <Clock className="text-muted-foreground h-5 w-5" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Hora</p>
+                    <p className="text-muted-foreground text-sm">Hora</p>
                     <p className="font-medium">
                       {appointmentData.startTime} - {appointmentData.endTime}
                     </p>
                     {selectedType && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         Duración: {selectedType.durationMinutes} minutos
                       </p>
                     )}
@@ -291,12 +339,12 @@ export default function ConfirmAppointmentPage() {
 
                 {selectedLocation && (
                   <div className="flex items-center gap-3">
-                    <MapPin className="h-5 w-5 text-muted-foreground" />
+                    <MapPin className="text-muted-foreground h-5 w-5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Ubicación</p>
+                      <p className="text-muted-foreground text-sm">Ubicación</p>
                       <p className="font-medium">{selectedLocation.nombre}</p>
                       {selectedLocation.direccion && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-muted-foreground text-sm">
                           {selectedLocation.direccion}
                         </p>
                       )}
@@ -306,18 +354,21 @@ export default function ConfirmAppointmentPage() {
 
                 {selectedType && (
                   <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <FileText className="text-muted-foreground h-5 w-5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Tipo de Cita</p>
+                      <p className="text-muted-foreground text-sm">
+                        Tipo de Cita
+                      </p>
                       <p className="font-medium">{selectedType.name}</p>
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="space-y-2 pt-4 border-t">
+              <div className="space-y-2 border-t pt-4">
                 <Label htmlFor="motive">
-                  Motivo de la Consulta <span className="text-destructive">*</span>
+                  Motivo de la Consulta{' '}
+                  <span className="text-destructive">*</span>
                 </Label>
                 <Textarea
                   id="motive"
@@ -328,30 +379,33 @@ export default function ConfirmAppointmentPage() {
                   rows={4}
                   className="resize-none"
                 />
-                <p className="text-xs text-muted-foreground text-right">
+                <p className="text-muted-foreground text-right text-xs">
                   {motive.length}/500 caracteres
                 </p>
               </div>
 
-              <div className="flex items-start gap-3 pt-4 border-t">
+              <div className="flex items-start gap-3 border-t pt-4">
                 <Checkbox
                   id="terms"
                   checked={acceptTerms}
-                  onCheckedChange={(checked: boolean) => setAcceptTerms(checked)}
+                  onCheckedChange={(checked: boolean) =>
+                    setAcceptTerms(checked)
+                  }
                 />
                 <label
                   htmlFor="terms"
-                  className="text-sm leading-relaxed cursor-pointer"
+                  className="cursor-pointer text-sm leading-relaxed"
                 >
-                  Acepto los términos y condiciones y autorizo el uso de mis datos personales
-                  para la gestión de mi cita médica
+                  Acepto los términos y condiciones y autorizo el uso de mis
+                  datos personales para la gestión de mi cita médica
                 </label>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-4 rounded-lg">
+              <div className="text-muted-foreground bg-muted/50 flex items-center gap-2 rounded-lg p-4 text-sm">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
                 <span>
-                  Recibirás una confirmación por correo electrónico una vez agendada la cita
+                  Recibirás una confirmación por correo electrónico una vez
+                  agendada la cita
                 </span>
               </div>
 
