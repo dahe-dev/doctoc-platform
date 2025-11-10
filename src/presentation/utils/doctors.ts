@@ -9,7 +9,7 @@ export const getDoctorTitle = (gender?: string, role?: string): string => {
     return 'Dra.';
   }
 
-  return 'Dr./Dra.';
+  return 'Dr.';
 };
 
 export const formatDoctorName = (

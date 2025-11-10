@@ -1,4 +1,4 @@
-"use client"
+'use client';
 
 import {
   BadgeCheck,
@@ -6,16 +6,17 @@ import {
   LogOut,
   User,
   Settings,
-} from "lucide-react"
-import Link from "next/link"
-import { useAuth } from "@/infrastructure/auth/AuthContext"
-import { ROUTES } from "@/config/constants"
+} from 'lucide-react';
+import Link from 'next/link';
+import { useAuth } from '@/infrastructure/auth/AuthContext';
+import { ROUTES } from '@/config/constants';
+import { getUserInitials } from '@/presentation/utils';
 
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@/presentation/components/ui/avatar"
+} from '@/presentation/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,34 +25,25 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/presentation/components/ui/dropdown-menu"
+} from '@/presentation/components/ui/dropdown-menu';
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@/presentation/components/ui/sidebar"
+} from '@/presentation/components/ui/sidebar';
 
 export function NavUser({
   user,
 }: {
   user: {
-    name: string
-    email: string
-    avatar: string
-  }
+    name: string;
+    email: string;
+    avatar: string;
+  };
 }) {
-  const { isMobile } = useSidebar()
-  const { logout } = useAuth()
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2)
-  }
+  const { isMobile } = useSidebar();
+  const { logout } = useAuth();
 
   return (
     <SidebarMenu>
@@ -64,7 +56,9 @@ export function NavUser({
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
+                <AvatarFallback className="rounded-lg">
+                  {getUserInitials(user.name)}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
@@ -75,7 +69,7 @@ export function NavUser({
           </DropdownMenuTrigger>
           <DropdownMenuContent
             className="w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
+            side={isMobile ? 'bottom' : 'right'}
             align="end"
             sideOffset={4}
           >
@@ -83,7 +77,9 @@ export function NavUser({
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">{getInitials(user.name)}</AvatarFallback>
+                  <AvatarFallback className="rounded-lg">
+                    {getUserInitials(user.name)}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
@@ -113,7 +109,10 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+            <DropdownMenuItem
+              onClick={logout}
+              className="text-destructive focus:text-destructive"
+            >
               <LogOut />
               Log out
             </DropdownMenuItem>
@@ -121,5 +120,5 @@ export function NavUser({
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
-  )
+  );
 }
