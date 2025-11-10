@@ -1,30 +1,59 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ArrowLeft, Calendar, Mail, Stethoscope, MapPin, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import {
+  ArrowLeft,
+  Calendar,
+  Mail,
+  Stethoscope,
+  MapPin,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 import { Button } from '@/presentation/components/ui/button';
 import { Container } from '@/presentation/components/ui/container';
 import { Section } from '@/presentation/components/ui/section';
-import { Card, CardContent, CardHeader, CardTitle } from '@/presentation/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/presentation/components/ui/avatar';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/presentation/components/ui/card';
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from '@/presentation/components/ui/avatar';
 import { Badge } from '@/presentation/components/ui/badge';
 import { LoadingSpinner } from '@/presentation/components/ui/LoadingSpinner';
 import { DoctorAvailabilityCalendar } from '@/presentation/components/features/DoctorAvailabilityCalendar';
 import { useDoctorProfile } from '@/presentation/hooks/queries';
-import { useAppointmentTypes, useLocations } from '@/presentation/hooks/queries/useOrganization';
+import {
+  useAppointmentTypes,
+  useLocations,
+} from '@/presentation/hooks/queries/useOrganization';
 import { UserMapper } from '@/core/application/mappers';
 import { DOCTOC_CONFIG, ROUTES } from '@/config/constants';
 import Link from 'next/link';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/presentation/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/presentation/components/ui/select';
 import { Label } from '@/presentation/components/ui/label';
 
 export default function DoctorProfilePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const doctorId = params.id as string;
+  const photoUrlFromQuery = searchParams.get('photo') || undefined;
 
   const [selectedSlot, setSelectedSlot] = useState<{
     date: Date;
@@ -34,24 +63,30 @@ export default function DoctorProfilePage() {
   const [selectedTypeId, setSelectedTypeId] = useState<string>('');
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
 
-  const { data: response, isLoading, error } = useDoctorProfile(doctorId, DOCTOC_CONFIG.orgID);
+  const {
+    data: response,
+    isLoading,
+    error,
+  } = useDoctorProfile(doctorId, DOCTOC_CONFIG.orgID);
   const { data: typesResponse } = useAppointmentTypes(DOCTOC_CONFIG.orgID);
   const { data: locationsResponse } = useLocations(DOCTOC_CONFIG.orgID);
 
   const doctor = response?.data ? UserMapper.toEntity(response.data) : null;
 
+  const effectivePhotoUrl = doctor?.photoUrl || photoUrlFromQuery || undefined;
+
   const allLocations = locationsResponse?.data || [];
-  const doctorLocationIds = doctor?.calendarInfo?.horarios 
-    ? Object.keys(doctor.calendarInfo.horarios) 
+  const doctorLocationIds = doctor?.calendarInfo?.horarios
+    ? Object.keys(doctor.calendarInfo.horarios)
     : [];
-  
-  const availableLocations = allLocations.filter(loc => 
-    doctorLocationIds.includes(loc.id)
+
+  const availableLocations = allLocations.filter((loc) =>
+    doctorLocationIds.includes(loc.id),
   );
 
-  const appointmentTypes = useMemo(() => 
-    typesResponse?.data?.filter(type => type.externalVisibility) || [], 
-    [typesResponse]
+  const appointmentTypes = useMemo(
+    () => typesResponse?.data?.filter((type) => type.externalVisibility) || [],
+    [typesResponse],
   );
 
   useEffect(() => {
@@ -66,20 +101,23 @@ export default function DoctorProfilePage() {
     }
   }, [appointmentTypes, selectedTypeId]);
 
-  const selectedType = appointmentTypes.find(type => type.id === selectedTypeId) || appointmentTypes[0];
+  const selectedType =
+    appointmentTypes.find((type) => type.id === selectedTypeId) ||
+    appointmentTypes[0];
 
-  const hasSchedule = doctor?.calendarInfo?.horarios && 
+  const hasSchedule =
+    doctor?.calendarInfo?.horarios &&
     Object.keys(doctor.calendarInfo.horarios).length > 0;
 
-  const totalLocations = doctor?.calendarInfo?.horarios 
-    ? Object.keys(doctor.calendarInfo.horarios).length 
+  const totalLocations = doctor?.calendarInfo?.horarios
+    ? Object.keys(doctor.calendarInfo.horarios).length
     : 0;
 
   const appointmentDuration = selectedType?.durationMinutes || 30;
 
   if (isLoading) {
     return (
-      <Section className="min-h-screen flex items-center justify-center">
+      <Section className="flex min-h-screen items-center justify-center">
         <LoadingSpinner />
       </Section>
     );
@@ -91,8 +129,8 @@ export default function DoctorProfilePage() {
         <Container>
           <Card className="p-12 text-center">
             <div className="space-y-4">
-              <div className="h-16 w-16 rounded-full bg-destructive/10 mx-auto flex items-center justify-center">
-                <AlertCircle className="h-8 w-8 text-destructive" />
+              <div className="bg-destructive/10 mx-auto flex h-16 w-16 items-center justify-center rounded-full">
+                <AlertCircle className="text-destructive h-8 w-8" />
               </div>
               <h2 className="text-2xl font-bold">Doctor no encontrado</h2>
               <p className="text-muted-foreground">
@@ -111,17 +149,22 @@ export default function DoctorProfilePage() {
     );
   }
 
-  const getWorkingDaysWithSchedule = (): Array<{ day: string; schedule: string }> => {
+  const getWorkingDaysWithSchedule = (): Array<{
+    day: string;
+    schedule: string;
+  }> => {
     if (!doctor.calendarInfo?.horarios || !selectedLocationId) return [];
-    
+
     const schedules = doctor.calendarInfo.horarios[selectedLocationId];
     if (!schedules) return [];
-    
+
     const daysMap = new Map<string, { start: string; end: string }[]>();
-    
-    const key = doctor.calendarInfo.configureByType ? Object.keys(schedules)[0] : 'default';
+
+    const key = doctor.calendarInfo.configureByType
+      ? Object.keys(schedules)[0]
+      : 'default';
     const schedule = schedules[key];
-    
+
     if (schedule?.horariesFijo) {
       Object.entries(schedule.horariesFijo).forEach(([day, slots]) => {
         if (slots && slots.length > 0) {
@@ -129,23 +172,29 @@ export default function DoctorProfilePage() {
         }
       });
     }
-    
+
     const dayNames: Record<string, string> = {
-      'Monday': 'Lunes',
-      'Tuesday': 'Martes',
-      'Wednesday': 'Miércoles',
-      'Thursday': 'Jueves',
-      'Friday': 'Viernes',
-      'Saturday': 'Sábado',
-      'Sunday': 'Domingo'
+      Monday: 'Lunes',
+      Tuesday: 'Martes',
+      Wednesday: 'Miércoles',
+      Thursday: 'Jueves',
+      Friday: 'Viernes',
+      Saturday: 'Sábado',
+      Sunday: 'Domingo',
     };
-    
+
     return Array.from(daysMap.entries()).map(([day, slots]) => {
-      const minStart = slots.reduce((min, s) => s.start < min ? s.start : min, '23:59');
-      const maxEnd = slots.reduce((max, s) => s.end > max ? s.end : max, '00:00');
+      const minStart = slots.reduce(
+        (min, s) => (s.start < min ? s.start : min),
+        '23:59',
+      );
+      const maxEnd = slots.reduce(
+        (max, s) => (s.end > max ? s.end : max),
+        '00:00',
+      );
       return {
         day: dayNames[day] || day,
-        schedule: `${minStart} - ${maxEnd}`
+        schedule: `${minStart} - ${maxEnd}`,
       };
     });
   };
@@ -158,10 +207,10 @@ export default function DoctorProfilePage() {
 
   const handleBookAppointment = () => {
     if (!selectedSlot || !selectedTypeId || !selectedLocationId) return;
-    
+
     const appointmentId = `apt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const dayKey = format(selectedSlot.date, 'dd-MM-yyyy');
-    
+
     const appointmentData = {
       doctorId,
       dayKey,
@@ -169,17 +218,20 @@ export default function DoctorProfilePage() {
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime,
       typeId: selectedTypeId,
-      locationId: selectedLocationId
+      locationId: selectedLocationId,
     };
-    
-    sessionStorage.setItem(`appointment_${appointmentId}`, JSON.stringify(appointmentData));
-    
+
+    sessionStorage.setItem(
+      `appointment_${appointmentId}`,
+      JSON.stringify(appointmentData),
+    );
+
     router.push(`/appointments/confirm/${appointmentId}`);
   };
 
   return (
     <>
-      <Section variant="gradient" size="default" >
+      <Section variant="gradient" size="default">
         <Container>
           <Button
             variant="outline"
@@ -190,43 +242,50 @@ export default function DoctorProfilePage() {
             Volver
           </Button>
 
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid gap-8 lg:grid-cols-3">
             <div className="lg:col-span-1">
               <Card>
                 <CardContent className="p-6">
                   <div className="flex flex-col items-center text-center">
                     <div className="relative mb-6">
-                      <Avatar className="h-32 w-32 border-4 border-border">
-                        <AvatarImage src={doctor.photoUrl} alt={doctor.fullName} />
-                        <AvatarFallback className="text-3xl">{doctor.initials}</AvatarFallback>
+                      <Avatar className="border-border h-32 w-32 border-4">
+                        <AvatarImage
+                          src={effectivePhotoUrl}
+                          alt={doctor.fullName}
+                        />
+                        <AvatarFallback className="text-3xl">
+                          {doctor.initials}
+                        </AvatarFallback>
                       </Avatar>
                       {hasSchedule && (
-                        <div className="absolute -bottom-2 -right-2 bg-primary rounded-full p-2">
-                          <CheckCircle2 className="h-6 w-6 text-primary-foreground" />
+                        <div className="bg-primary absolute -right-2 -bottom-2 rounded-full p-2">
+                          <CheckCircle2 className="text-primary-foreground h-6 w-6" />
                         </div>
                       )}
                     </div>
 
-                    <h1 className="text-2xl font-bold mb-2">{doctor.fullName}</h1>
+                    <h1 className="mb-2 text-2xl font-bold">
+                      {doctor.fullName}
+                    </h1>
 
                     {doctor.specialty && (
-                      <div className="flex items-center gap-2 text-muted-foreground mb-4">
+                      <div className="text-muted-foreground mb-4 flex items-center gap-2">
                         <Stethoscope className="h-5 w-5" />
                         <span className="text-lg">{doctor.specialty}</span>
                       </div>
                     )}
 
-                    <div className="w-full space-y-3 mb-6">
+                    <div className="mb-6 w-full space-y-3">
                       {doctor.email && (
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                        <div className="text-muted-foreground bg-muted flex items-center gap-3 rounded-lg p-3 text-sm">
                           <Mail className="h-4 w-4 shrink-0" />
                           <span className="truncate">{doctor.email}</span>
                         </div>
                       )}
 
                       {workingDays.length > 0 && (
-                        <div className="flex flex-col gap-1 text-sm text-muted-foreground p-2 bg-muted rounded-lg">
-                          <div className="flex items-center gap-2 font-medium pb-2">
+                        <div className="text-muted-foreground bg-muted flex flex-col gap-1 rounded-lg p-2 text-sm">
+                          <div className="flex items-center gap-2 pb-2 font-medium">
                             <Calendar className="h-4 w-4 shrink-0" />
                             <span>Días de atención:</span>
                           </div>
@@ -234,7 +293,8 @@ export default function DoctorProfilePage() {
                           <div className="space-y-1">
                             {workingDays.map(({ day, schedule }) => (
                               <div key={day} className="text-xs">
-                                <span className="font-medium">{day}:</span> {schedule}
+                                <span className="font-medium">{day}:</span>{' '}
+                                {schedule}
                               </div>
                             ))}
                           </div>
@@ -242,14 +302,18 @@ export default function DoctorProfilePage() {
                       )}
 
                       {totalLocations > 0 && (
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                        <div className="text-muted-foreground bg-muted flex items-center gap-3 rounded-lg p-3 text-sm">
                           <MapPin className="h-4 w-4 shrink-0" />
-                          <span>{totalLocations} {totalLocations === 1 ? 'sede' : 'sedes'} disponibles</span>
+                          <span>
+                            {totalLocations}{' '}
+                            {totalLocations === 1 ? 'sede' : 'sedes'}{' '}
+                            disponibles
+                          </span>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex flex-wrap gap-2 justify-center">
+                    <div className="flex flex-wrap justify-center gap-2">
                       {hasSchedule && (
                         <Badge variant="success" className="gap-1">
                           <Clock className="h-3 w-3" />
@@ -257,9 +321,7 @@ export default function DoctorProfilePage() {
                         </Badge>
                       )}
                       {doctor.allowsOverbooking() && (
-                        <Badge variant="outline">
-                          Sobreagendamiento
-                        </Badge>
+                        <Badge variant="outline">Sobreagendamiento</Badge>
                       )}
                     </div>
                   </div>
@@ -267,38 +329,40 @@ export default function DoctorProfilePage() {
               </Card>
 
               {selectedSlot && (
-                <Card className="mt-4 border-2 border-primary shadow-lg">
+                <Card className="border-primary mt-4 border-2 shadow-lg">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <CheckCircle2 className="text-primary h-5 w-5" />
                       Horario Seleccionado
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Calendar className="h-5 w-5 text-primary" />
+                    <div className="bg-primary/5 flex items-center gap-3 rounded-lg p-3">
+                      <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
+                        <Calendar className="text-primary h-5 w-5" />
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Fecha</p>
+                        <p className="text-muted-foreground text-xs">Fecha</p>
                         <p className="font-semibold">
-                          {format(selectedSlot.date, "d 'de' MMMM 'de' yyyy", { locale: es })}
+                          {format(selectedSlot.date, "d 'de' MMMM 'de' yyyy", {
+                            locale: es,
+                          })}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Clock className="h-5 w-5 text-primary" />
+                    <div className="bg-primary/5 flex items-center gap-3 rounded-lg p-3">
+                      <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-full">
+                        <Clock className="text-primary h-5 w-5" />
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground">Hora</p>
+                        <p className="text-muted-foreground text-xs">Hora</p>
                         <p className="font-semibold">
                           {selectedSlot.startTime} - {selectedSlot.endTime}
                         </p>
                       </div>
                     </div>
-                    <Button 
-                      className="w-full mt-4" 
+                    <Button
+                      className="mt-4 w-full"
                       size="lg"
                       onClick={handleBookAppointment}
                     >
@@ -313,29 +377,38 @@ export default function DoctorProfilePage() {
             <div className="lg:col-span-2">
               {hasSchedule ? (
                 <div className="space-y-4">
-                  {(availableLocations.length > 1 || appointmentTypes.length > 0) && (
+                  {(availableLocations.length > 1 ||
+                    appointmentTypes.length > 0) && (
                     <Card>
                       <CardContent className="p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                           {availableLocations.length > 1 && (
                             <div className="space-y-1.5">
-                              <Label >
+                              <Label>
                                 <MapPin className="h-3.5 w-3.5" />
                                 Sedes
                               </Label>
-                              <Select value={selectedLocationId} onValueChange={setSelectedLocationId}>
+                              <Select
+                                value={selectedLocationId}
+                                onValueChange={setSelectedLocationId}
+                              >
                                 <SelectTrigger className="h-10">
                                   <SelectValue placeholder="Seleccionar sede" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {availableLocations.map((location) => (
-                                    <SelectItem key={location.id} value={location.id}>
+                                    <SelectItem
+                                      key={location.id}
+                                      value={location.id}
+                                    >
                                       <div className="flex items-center gap-2">
-                                        <MapPin className="h-3.5 w-3.5 text-primary" />
+                                        <MapPin className="text-primary h-3.5 w-3.5" />
                                         <div>
-                                          <p className="font-medium text-sm">{location.nombre}</p>
+                                          <p className="text-sm font-medium">
+                                            {location.nombre}
+                                          </p>
                                           {location.direccion && (
-                                            <p className="text-xs text-muted-foreground">
+                                            <p className="text-muted-foreground text-xs">
                                               {location.direccion}
                                             </p>
                                           )}
@@ -354,7 +427,10 @@ export default function DoctorProfilePage() {
                                 <Stethoscope className="h-3.5 w-3.5" />
                                 Tipo de Cita
                               </Label>
-                              <Select value={selectedTypeId} onValueChange={setSelectedTypeId}>
+                              <Select
+                                value={selectedTypeId}
+                                onValueChange={setSelectedTypeId}
+                              >
                                 <SelectTrigger className="h-10">
                                   <SelectValue placeholder="Seleccionar tipo" />
                                 </SelectTrigger>
@@ -362,17 +438,26 @@ export default function DoctorProfilePage() {
                                   {appointmentTypes.map((type) => (
                                     <SelectItem key={type.id} value={type.id}>
                                       <div className="flex items-center gap-2">
-                                        <div 
-                                          className="h-6 w-6 rounded-full flex items-center justify-center"
-                                          style={{ 
-                                            backgroundColor: type.color ? `${type.color}20` : 'hsl(var(--primary) / 0.1)',
-                                            color: type.color || 'hsl(var(--primary))'
+                                        <div
+                                          className="flex h-6 w-6 items-center justify-center rounded-full"
+                                          style={{
+                                            backgroundColor: type.color
+                                              ? `${type.color}20`
+                                              : 'hsl(var(--primary) / 0.1)',
+                                            color:
+                                              type.color ||
+                                              'hsl(var(--primary))',
                                           }}
                                         >
                                           <Clock className="h-3 w-3" />
                                         </div>
-                                        <span className="font-medium text-sm">{type.name}</span>
-                                        <Badge variant="secondary" className="text-xs ml-auto">
+                                        <span className="text-sm font-medium">
+                                          {type.name}
+                                        </span>
+                                        <Badge
+                                          variant="secondary"
+                                          className="ml-auto text-xs"
+                                        >
                                           {type.durationMinutes}min
                                         </Badge>
                                       </div>
@@ -386,7 +471,7 @@ export default function DoctorProfilePage() {
                       </CardContent>
                     </Card>
                   )}
-                  
+
                   <DoctorAvailabilityCalendar
                     doctor={response.data}
                     onSlotSelect={handleSlotSelect}
@@ -398,12 +483,15 @@ export default function DoctorProfilePage() {
               ) : (
                 <Card className="p-12 text-center">
                   <div className="space-y-4">
-                    <div className="h-16 w-16 rounded-full bg-muted mx-auto flex items-center justify-center">
-                      <Clock className="h-8 w-8 text-muted-foreground" />
+                    <div className="bg-muted mx-auto flex h-16 w-16 items-center justify-center rounded-full">
+                      <Clock className="text-muted-foreground h-8 w-8" />
                     </div>
-                    <h3 className="text-xl font-bold">Sin horarios disponibles</h3>
+                    <h3 className="text-xl font-bold">
+                      Sin horarios disponibles
+                    </h3>
                     <p className="text-muted-foreground">
-                      Este doctor aún no ha configurado sus horarios de atención.
+                      Este doctor aún no ha configurado sus horarios de
+                      atención.
                     </p>
                   </div>
                 </Card>

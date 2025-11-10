@@ -28,7 +28,12 @@ export class DoctocUserRepository implements IUserRepository {
       const specialty = professional?.specialty || '';
       const photo =
         basic?.profile_image || response.images?.profile_image || '';
-      const gender = 'M';
+      const gender =
+        ((basic as Record<string, unknown>)?.profile_gender as string) || 'M';
+      const role =
+        ((response as Record<string, unknown>)?.role as string) ||
+        ((professional as Record<string, unknown>)?.role as string) ||
+        'doctor';
 
       if (!uid || !firstName) {
         console.warn(
@@ -46,6 +51,7 @@ export class DoctocUserRepository implements IUserRepository {
         calendarInfo as CalendarInfo,
         photo,
         gender,
+        role,
       );
     } catch (error) {
       console.error('[DoctocUserRepository] Error finding user by id:', error);
@@ -88,6 +94,7 @@ export class DoctocUserRepository implements IUserRepository {
             user.calendarInfo as CalendarInfo,
             user.photo as string | undefined,
             user.gender as string,
+            user.role as string,
           );
         });
     } catch (error) {
