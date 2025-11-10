@@ -1,13 +1,13 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { 
-  getAuth, 
+import {
+  getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User,
   sendPasswordResetEmail,
-  updateProfile
+  updateProfile,
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
 
@@ -31,22 +31,33 @@ export interface AuthUser {
   photoURL: string | null;
 }
 
-export const signIn = async (email: string, password: string): Promise<User> => {
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+export const signIn = async (
+  email: string,
+  password: string,
+): Promise<User> => {
+  const userCredential = await signInWithEmailAndPassword(
+    auth,
+    email,
+    password,
+  );
   return userCredential.user;
 };
 
 export const signUp = async (
-  email: string, 
-  password: string, 
-  displayName?: string
+  email: string,
+  password: string,
+  displayName?: string,
 ): Promise<User> => {
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-  
+  const userCredential = await createUserWithEmailAndPassword(
+    auth,
+    email,
+    password,
+  );
+
   if (displayName) {
     await updateProfile(userCredential.user, { displayName });
   }
-  
+
   return userCredential.user;
 };
 
@@ -56,7 +67,7 @@ export const savePatientIdToAuth = async (patientId: string): Promise<void> => {
     const currentDisplayName = user.displayName || '';
     const newDisplayName = `${currentDisplayName}|pid:${patientId}`;
     await updateProfile(user, { displayName: newDisplayName });
-    
+
     if (typeof window !== 'undefined') {
       localStorage.setItem('patient_id', patientId);
     }
@@ -75,11 +86,11 @@ export const getPatientIdFromAuth = (): string | null => {
       return patientId;
     }
   }
-  
+
   if (typeof window !== 'undefined') {
     return localStorage.getItem('patient_id');
   }
-  
+
   return null;
 };
 
@@ -118,24 +129,44 @@ export const getIdToken = async (): Promise<string | null> => {
     const token = await user.getIdToken();
     if (typeof window !== 'undefined') {
       localStorage.setItem('auth_token', token);
-      document.cookie = `auth_token=${token}; path=/; max-age=3600; SameSite=Lax`;
+
+      const isProduction = window.location.protocol === 'https:';
+      const cookieOptions = [
+        `auth_token=${token}`,
+        'path=/',
+        'max-age=3600',
+        'SameSite=Lax',
+      ];
+
+      if (isProduction) {
+        cookieOptions.push('Secure');
+      }
+
+      document.cookie = cookieOptions.join('; ');
     }
     return token;
   }
   return null;
 };
 
-export const saveUserPatientId = async (uid: string, patientId: string): Promise<void> => {
-  await setDoc(doc(db, 'users', uid), {
-    patientId,
-    updatedAt: new Date().toISOString()
-  }, { merge: true });
+export const saveUserPatientId = async (
+  uid: string,
+  patientId: string,
+): Promise<void> => {
+  await setDoc(
+    doc(db, 'users', uid),
+    {
+      patientId,
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true },
+  );
 };
 
 export const getUserPatientId = async (uid: string): Promise<string | null> => {
   const docRef = doc(db, 'users', uid);
   const docSnap = await getDoc(docRef);
-  
+
   if (docSnap.exists()) {
     return docSnap.data()?.patientId || null;
   }
